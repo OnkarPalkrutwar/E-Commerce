@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Heart, Search, Menu, X, Flame, Footprints, User, LogOut, Package } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { shoeCategories, clothingCategories, accessoryCategories } from '../data/products';
 
 export default function Navbar() {
   const { totalItems, wishlistCount } = useCart();
@@ -10,6 +11,45 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const currentPath = location.pathname;
+  const currentGender = searchParams.get('gender');
+  const currentCategory = searchParams.get('category');
+  const isSale = searchParams.get('sale') === 'true';
+
+  const isShoesCategory =
+    currentCategory === 'Shoes' ||
+    (currentCategory && shoeCategories.some((c) => c.toLowerCase() === currentCategory.toLowerCase()));
+
+  const isClothingCategory =
+    currentCategory === 'Clothing' ||
+    (currentCategory && clothingCategories.some((c) => c.toLowerCase() === currentCategory.toLowerCase()));
+
+  const isAccessoriesCategory =
+    currentCategory === 'Accessories' ||
+    (currentCategory && accessoryCategories.some((c) => c.toLowerCase() === currentCategory.toLowerCase()));
+
+  const isHomeActive = currentPath === '/';
+  const isSaleActive = currentPath === '/shop' && isSale;
+  const isShoesActive = currentPath === '/shop' && !isSale && isShoesCategory;
+  const isClothingActive = currentPath === '/shop' && !isSale && isClothingCategory;
+  const isAccessoriesActive = currentPath === '/shop' && !isSale && isAccessoriesCategory;
+  const isMenActive =
+    currentPath === '/shop' &&
+    !isSale &&
+    !isShoesCategory &&
+    !isClothingCategory &&
+    !isAccessoriesCategory &&
+    currentGender?.toLowerCase() === 'men';
+  const isWomenActive =
+    currentPath === '/shop' &&
+    !isSale &&
+    !isShoesCategory &&
+    !isClothingCategory &&
+    !isAccessoriesCategory &&
+    currentGender?.toLowerCase() === 'women';
 
   const handleSearchClick = () => {
     navigate('/shop');
@@ -35,39 +75,43 @@ export default function Navbar() {
           <nav>
             <ul className="nav-links">
               <li>
-                <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <Link to="/" className={`nav-link ${isHomeActive ? 'active' : ''}`}>
                   Home
-                </NavLink>
+                </Link>
               </li>
               <li>
-                <NavLink to="/shop?gender=Men" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <Link to="/shop?gender=Men" className={`nav-link ${isMenActive ? 'active' : ''}`}>
                   Men
-                </NavLink>
+                </Link>
               </li>
               <li>
-                <NavLink to="/shop?gender=Women" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <Link to="/shop?gender=Women" className={`nav-link ${isWomenActive ? 'active' : ''}`}>
                   Women
-                </NavLink>
+                </Link>
               </li>
               <li>
-                <NavLink to="/shop?category=Shoes" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <Link to="/shop?category=Shoes" className={`nav-link ${isShoesActive ? 'active' : ''}`}>
                   Shoes
-                </NavLink>
+                </Link>
               </li>
               <li>
-                <NavLink to="/shop?category=Clothing" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <Link to="/shop?category=Clothing" className={`nav-link ${isClothingActive ? 'active' : ''}`}>
                   Clothing
-                </NavLink>
+                </Link>
               </li>
               <li>
-                <NavLink to="/shop?category=Accessories" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <Link to="/shop?category=Accessories" className={`nav-link ${isAccessoriesActive ? 'active' : ''}`}>
                   Accessories
-                </NavLink>
+                </Link>
               </li>
               <li>
-                <NavLink to="/shop?sale=true" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} style={{ color: 'var(--accent-orange)' }}>
+                <Link
+                  to="/shop?sale=true"
+                  className={`nav-link ${isSaleActive ? 'active' : ''}`}
+                  style={{ color: 'var(--accent-orange)' }}
+                >
                   Sale 🔥
-                </NavLink>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -179,35 +223,38 @@ export default function Navbar() {
         {/* Mobile Nav Drawer */}
         {mobileMenuOpen && (
           <div className="mobile-drawer">
-            <NavLink to="/" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            <Link to="/" className={`mobile-nav-link ${isHomeActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Home
-            </NavLink>
-            <NavLink to="/shop?gender=Men" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/shop?gender=Men" className={`mobile-nav-link ${isMenActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Men's Collection
-            </NavLink>
-            <NavLink to="/shop?gender=Women" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/shop?gender=Women" className={`mobile-nav-link ${isWomenActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Women's Collection
-            </NavLink>
-            <NavLink to="/shop?category=Shoes" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/shop?category=Shoes" className={`mobile-nav-link ${isShoesActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Shoes & Sneakers
-            </NavLink>
-            <NavLink to="/shop?category=Clothing" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/shop?category=Clothing" className={`mobile-nav-link ${isClothingActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Clothing & Apparel
-            </NavLink>
-            <NavLink to="/shop?category=Accessories" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/shop?category=Accessories" className={`mobile-nav-link ${isAccessoriesActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Accessories
-            </NavLink>
-            <NavLink to="/wishlist" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/shop?sale=true" className={`mobile-nav-link ${isSaleActive ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--accent-orange)' }}>
+              Sale 🔥
+            </Link>
+            <Link to="/wishlist" className={`mobile-nav-link ${currentPath === '/wishlist' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               My Wishlist ({wishlistCount})
-            </NavLink>
-            <NavLink to="/cart" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+            </Link>
+            <Link to="/cart" className={`mobile-nav-link ${currentPath === '/cart' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
               Shopping Cart ({totalItems})
-            </NavLink>
+            </Link>
             {isAuthenticated ? (
               <>
-                <NavLink to="/orders" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                <Link to="/orders" className={`mobile-nav-link ${currentPath === '/orders' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
                   My Orders
-                </NavLink>
+                </Link>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
@@ -220,9 +267,9 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <NavLink to="/login" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--accent-orange)' }}>
+              <Link to="/login" className={`mobile-nav-link ${currentPath === '/login' || currentPath === '/register' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--accent-orange)' }}>
                 Sign In / Register
-              </NavLink>
+              </Link>
             )}
           </div>
         )}

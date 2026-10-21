@@ -252,19 +252,21 @@ input, select, textarea {
 }
 
 .nav-link {
+  display: inline-block;
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--text-muted);
   transition: color var(--transition-fast);
   position: relative;
   padding: 0.5rem 0;
+  text-decoration: none;
 }
 
 .nav-link:hover, .nav-link.active {
   color: var(--text-main);
 }
 
-.nav-link.active::after {
+.nav-link::after {
   content: '';
   position: absolute;
   bottom: -2px;
@@ -273,6 +275,13 @@ input, select, textarea {
   height: 3px;
   background-color: var(--accent-orange);
   border-radius: var(--radius-full);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--transition-normal);
+}
+
+.nav-link.active::after {
+  transform: scaleX(1);
 }
 
 .nav-actions {
