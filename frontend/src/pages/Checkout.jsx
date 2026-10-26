@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { ShieldCheck, CheckCircle2, CreditCard, Wallet, Truck } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, CreditCard, Wallet, Truck, Download, FileText, Printer } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import api from '../services/api';
+import { downloadReceiptPDF } from '../utils/receiptGenerator';
+import ReceiptModal from '../components/ReceiptModal';
 
 export default function Checkout() {
   const { cart, clearCart, totalItems, subtotal, shippingFee, tax, totalPrice } = useCart();
@@ -25,6 +27,8 @@ export default function Checkout() {
   const [errors, setErrors] = useState({});
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,6 +81,14 @@ export default function Checkout() {
         unitPrice: item.product.price
       }));
 
+      // Snapshot totals before clearing cart
+      const snapshotSubtotal = subtotal;
+      const snapshotShippingFee = shippingFee;
+      const snapshotTax = tax;
+      const snapshotTotalPrice = totalPrice;
+
+      let finalOrderId = `URBAN-${Math.floor(100000 + Math.random() * 900000)}`;
+
       try {
         const orderData = {
           shippingAddress,
@@ -85,12 +97,32 @@ export default function Checkout() {
         };
 
         const result = await api.createOrder(orderData);
-        setOrderId(result._id ? `URBAN-${result._id.slice(-8).toUpperCase()}` : `URBAN-${Math.floor(100000 + Math.random() * 900000)}`);
+        if (result && result._id) {
+          finalOrderId = `URBAN-${result._id.slice(-8).toUpperCase()}`;
+        }
       } catch (err) {
         console.warn('Backend order submission fallback:', err.message);
-        setOrderId(`URBAN-${Math.floor(100000 + Math.random() * 900000)}`);
       }
 
+      const receiptData = {
+        orderId: finalOrderId,
+        createdAt: new Date().toISOString(),
+        shippingAddress,
+        paymentMethod: formData.paymentMethod,
+        paymentStatus: formData.paymentMethod === 'cod' ? 'pending' : 'paid',
+        orderStatus: 'confirmed',
+        items: orderItems,
+        subtotal: snapshotSubtotal,
+        shippingFee: snapshotShippingFee,
+        tax: snapshotTax,
+        totalPrice: snapshotTotalPrice,
+        totalAmount: snapshotTotalPrice,
+        email: formData.email,
+        phone: formData.phone
+      };
+
+      setOrderId(finalOrderId);
+      setConfirmedOrder(receiptData);
       setOrderComplete(true);
 
       try {
@@ -122,9 +154,9 @@ export default function Checkout() {
   }
 
   // Order Complete Modal View
-  if (orderComplete) {
+  if (orderComplete && confirmedOrder) {
     return (
-      <div className="container" style={{ padding: '5rem 1.5rem', maxWidth: '680px', margin: '0 auto' }}>
+      <div className="container" style={{ padding: '5rem 1.5rem', maxWidth: '720px', margin: '0 auto' }}>
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
@@ -162,40 +194,84 @@ export default function Checkout() {
           <div
             style={{
               backgroundColor: 'var(--bg-primary)',
-              padding: '1.25rem',
+              padding: '1.5rem',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-color)',
-              marginBottom: '2rem',
+              marginBottom: '1.75rem',
               textAlign: 'left'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Order ID:</span>
-              <strong style={{ color: 'var(--accent-orange)' }}>{orderId}</strong>
+              <strong style={{ color: 'var(--accent-orange)' }}>#{confirmedOrder.orderId}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Recipient Name:</span>
               <strong>{formData.fullName}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Shipping Address:</span>
               <strong>{formData.address}, {formData.city}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Payment Amount:</span>
-              <span style={{ color: '#10b981', fontWeight: 800 }}>Paid (${totalPrice.toFixed(2)})</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Payment Method:</span>
+              <strong style={{ textTransform: 'uppercase' }}>{confirmedOrder.paymentMethod}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Total Paid:</span>
+              <span style={{ color: '#10b981', fontWeight: 900, fontSize: '1.15rem' }}>${confirmedOrder.totalPrice.toFixed(2)}</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <Link to="/" className="btn btn-primary btn-lg">
+          {/* Download Receipt Actions */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center',
+              marginBottom: '2rem',
+              flexWrap: 'wrap'
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              onClick={() => downloadReceiptPDF(confirmedOrder, formData)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem 1.6rem' }}
+            >
+              <Download size={20} /> Download Receipt (PDF)
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-lg"
+              onClick={() => setIsReceiptModalOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem 1.5rem' }}
+            >
+              <FileText size={20} /> View Bill & Print
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', flexWrap: 'wrap' }}>
+            <Link to="/" className="btn btn-outline">
               Return to Home
             </Link>
-            <Link to="/shop" className="btn btn-secondary btn-lg">
+            <Link to="/orders" className="btn btn-outline">
+              View My Orders
+            </Link>
+            <Link to="/shop" className="btn btn-outline">
               Explore More Gear
             </Link>
           </div>
         </div>
+
+        <ReceiptModal
+          isOpen={isReceiptModalOpen}
+          onClose={() => setIsReceiptModalOpen(false)}
+          order={confirmedOrder}
+          user={formData}
+        />
       </div>
     );
   }

@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, Clock, CheckCircle2, AlertCircle, ArrowRight, Truck, RefreshCw } from 'lucide-react';
+import { Package, Clock, CheckCircle2, AlertCircle, ArrowRight, Truck, RefreshCw, Download, FileText } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { downloadReceiptPDF } from '../utils/receiptGenerator';
+import ReceiptModal from '../components/ReceiptModal';
 
 export default function Orders() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -186,15 +190,17 @@ export default function Orders() {
                 ))}
               </div>
 
-              {/* Order Footer */}
+              {/* Order Footer & Actions */}
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  paddingTop: '1rem',
+                  paddingTop: '1.25rem',
                   borderTop: '1px dashed var(--border-color)',
-                  fontSize: '0.9rem'
+                  fontSize: '0.9rem',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
                 }}
               >
                 <div>
@@ -205,17 +211,48 @@ export default function Orders() {
                   </span>
                 </div>
 
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Amount: </span>
-                  <strong style={{ fontSize: '1.2rem', color: 'var(--accent-orange)' }}>
-                    ${order.totalAmount.toFixed(2)}
-                  </strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Total Amount: </span>
+                    <strong style={{ fontSize: '1.2rem', color: 'var(--accent-orange)' }}>
+                      ${order.totalAmount.toFixed(2)}
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => {
+                        setSelectedReceiptOrder(order);
+                        setReceiptModalOpen(true);
+                      }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
+                    >
+                      <FileText size={15} /> View Bill
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      onClick={() => downloadReceiptPDF(order, user)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}
+                    >
+                      <Download size={15} /> Receipt PDF
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      <ReceiptModal
+        isOpen={receiptModalOpen}
+        onClose={() => setReceiptModalOpen(false)}
+        order={selectedReceiptOrder}
+        user={user}
+      />
     </div>
   );
 }
